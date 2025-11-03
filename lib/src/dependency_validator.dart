@@ -53,7 +53,6 @@ Future<bool> checkPackage({required String root}) async {
     }
     config = pubspecConfig.dependencyValidator;
   }
-
   final excludes = config.exclude
       .map((s) {
         try {
@@ -68,7 +67,9 @@ Future<bool> checkPackage({required String root}) async {
   logger.fine('excludes:\n${bulletItems(excludes.map((g) => g.pattern))}\n');
   final ignoredPackages = config.ignore;
   logger.fine('ignored packages:\n${bulletItems(ignoredPackages)}\n');
-
+  final excludedWorkspacePackages = config.excludedWorkspacePackages;
+  logger.fine(
+      'excluded workspace packages:\n${bulletItems(excludedWorkspacePackages)}\n');
   // Read and parse the analysis_options.yaml in the current working directory.
   final optionsIncludePackage = getAnalysisOptionsIncludePackage(path: root);
 
@@ -78,13 +79,18 @@ Future<bool> checkPackage({required String root}) async {
     pubspecFile.readAsStringSync(),
     sourceUrl: pubspecFile.uri,
   );
-
   var subResult = true;
   if (pubspec.isWorkspaceRoot) {
-    logger.fine('In a workspace. Recursing through sub-packages...');
+    logger.info('In a workspace. Recursing through sub-packages...');
+    logger.info('excludedWorkspacePackages: $excludedWorkspacePackages');
     for (final package in pubspec.workspace ?? []) {
-      subResult &= await checkPackage(root: '$root/$package');
-      logger.info('');
+      logger.info('package: $package');
+      if (excludedWorkspacePackages.contains(package)) {
+        logger.info('Excluding workspace package: $package');
+      } else {
+        subResult &= await checkPackage(root: '$root/$package');
+        logger.info('');
+      }
     }
   }
 

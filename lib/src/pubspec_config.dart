@@ -42,6 +42,9 @@ class DepValidatorConfig {
   final List<String> exclude;
 
   @JsonKey(defaultValue: [])
+  final List<String> excludedWorkspacePackages;
+
+  @JsonKey(defaultValue: [])
   final List<String> ignore;
 
   @JsonKey(defaultValue: false)
@@ -49,6 +52,7 @@ class DepValidatorConfig {
 
   const DepValidatorConfig({
     this.exclude = const [],
+    this.excludedWorkspacePackages = const [],
     this.ignore = const [],
     this.allowPins = false,
   });
