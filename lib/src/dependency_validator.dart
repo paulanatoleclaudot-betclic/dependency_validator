@@ -16,6 +16,7 @@ import 'dart:io';
 
 import 'package:build_config/build_config.dart';
 import 'package:dependency_validator/src/import_export_ast_visitor.dart';
+import 'package:glob/glob.dart';
 import 'package:io/ansi.dart';
 import 'package:logging/logging.dart';
 import 'package:package_config/package_config.dart';
@@ -27,7 +28,8 @@ import 'pubspec_config.dart';
 import 'utils.dart';
 
 /// Check for missing, under-promoted, over-promoted, and unused dependencies.
-Future<bool> checkPackage({required String root}) async {
+Future<bool> checkPackage(
+    {required String root, List<String>? inheritedIgnores}) async {
   var result = true;
   if (!File('$root/pubspec.yaml').existsSync()) {
     logger.shout(red.wrap('pubspec.yaml not found'));
@@ -65,7 +67,7 @@ Future<bool> checkPackage({required String root}) async {
       .nonNulls
       .toList();
   logger.fine('excludes:\n${bulletItems(excludes.map((g) => g.pattern))}\n');
-  final ignoredPackages = config.ignore;
+  final ignoredPackages = inheritedIgnores ?? config.ignore;
   logger.fine('ignored packages:\n${bulletItems(ignoredPackages)}\n');
   final excludedWorkspacePackages = config.excludedWorkspacePackages;
   logger.fine(
@@ -82,13 +84,13 @@ Future<bool> checkPackage({required String root}) async {
   var subResult = true;
   if (pubspec.isWorkspaceRoot) {
     logger.info('In a workspace. Recursing through sub-packages...');
-    logger.info('excludedWorkspacePackages: $excludedWorkspacePackages');
     for (final package in pubspec.workspace ?? []) {
       logger.info('package: $package');
       if (excludedWorkspacePackages.contains(package)) {
-        logger.info('Excluding workspace package: $package');
+        logger.info('Skipping workspace package: $package\n');
       } else {
-        subResult &= await checkPackage(root: '$root/$package');
+        subResult &= await checkPackage(
+            root: '$root/$package', inheritedIgnores: ignoredPackages);
         logger.info('');
       }
     }
